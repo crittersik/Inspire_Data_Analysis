@@ -5,3 +5,6 @@ Based on the data from InspireHEP I perform some simple statistical analysis, be
 InspireHEP is a High-Energy Physics Literature Database. The data are available here: 
 http://inspirehep.net/info/hep/api
 I have downloaded the current full dataset, which is available at that site.
+
+
+To vie please use notebook viewer, http://nbviewer.ipython.org/github/crittersik/Inspire_Data_Analysis/blob/master/Inspire_basic_plots.ipynb
