@@ -4,7 +4,7 @@ import numpy as np
 import sys
 
 
-DATA_PATH = "C:/Users/Oluszka/Documents/inspire_data/records-2015-03-04" \
+DATA_PATH = "/inspire_data/records-2015-03-04" \
 			".json"
 if len(sys.argv) > 1:
 	# sys.argv is a list of command line arguments given to the python command
