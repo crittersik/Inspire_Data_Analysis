@@ -3,13 +3,10 @@ import json
 import numpy as np
 import sys
 
-
 DATA_PATH = "/inspire_data/records-2015-03-04" \
 			".json"
+#take path
 if len(sys.argv) > 1:
-	# sys.argv is a list of command line arguments given to the python command
-	# the name of this script is always the first of them
-	# if this script is given command line arguments, we'll use first of them as DATA_PATH
 	DATA_PATH = sys.argv[1]
 
 
