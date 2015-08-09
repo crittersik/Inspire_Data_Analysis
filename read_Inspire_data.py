@@ -1,14 +1,5 @@
 import pandas as pd
 import json
-import numpy as np
-import sys
-
-DATA_PATH = "/inspire_data/records-2015-03-04" \
-			".json"
-#take path
-if len(sys.argv) > 1:
-	DATA_PATH = sys.argv[1]
-
 
 def make_date(string_date):
     if string_date is None:
@@ -39,10 +30,11 @@ def load_inspire(path):
 	df['abstract_len'] = map(len, df['abstract'])
 	df['year'] = map(make_date, df['creation_date'])
 
-	df_temp = df[(df['coauth_count'] + df['authors_count'] > 0)]
-	df_clean = df_temp[df_temp['year'] >= 1910]
 	return df
-	
-if __name__ == "__main__":
-	df = load_inspire(DATA_PATH)
+
+#	df_temp = df[(df['coauth_count'] + df['authors_count'] > 0)]
+#	return df_temp
+#	df_clean = df_temp[df_temp['year'] >= 1910]
+#	return df_clean
+
 
