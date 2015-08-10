@@ -1,13 +1,25 @@
 import pandas as pd
 import json
+from datetime import datetime
 
-def make_date(string_date):
-    if string_date is None:
-        return 0
-    try:
-        return int(string_date[:4])
-    except:
-        return 0
+#def make_date(string_date):
+#    if string_date is None:
+#        return 0
+#    try:
+#        return int(string_date[:4])
+#    except:
+#        return 0
+
+
+def try_parsing_date(text):
+    if text==None:
+        return 'NaN'
+    for fmt in ("%Y-%m-%d",  "%Y-%m", "%Y-%B", "%Y-%b.", "%Y-%b", "%b %Y", '%Y',"%Y,%m,%d" ,"%Y/%m/%d","%Y/%m", "%B %Y", "%b. %Y"):
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            pass
+    return 'NaN'
 
 def load_inspire(path):
 	columns = {}
@@ -28,13 +40,19 @@ def load_inspire(path):
 	df['ref_count'] = map(len, df['references'])
 	df['title_len'] = map(len, df['title'])
 	df['abstract_len'] = map(len, df['abstract'])
-	df['year'] = map(make_date, df['creation_date'])
 
-	return df
+	df['date'] = map(try_parsing_date, df['creation_date'])
+	df['year'] = map(lambda x: x.year, df['date'])
 
-#	df_temp = df[(df['coauth_count'] + df['authors_count'] > 0)]
-#	return df_temp
-#	df_clean = df_temp[df_temp['year'] >= 1910]
-#	return df_clean
+	df_temp = df[df['date'] != 'NaN']
+
+
+# choose to return only relevant features for further analysis
+	return df_temp[['abstract','citations', 'free_keywords', 'recid',
+					 'references', 'standardized_keywords', 'title',
+					 'tot_auth_count', 'tot_auth_list', 'cit_count',
+					 'free_kwd_count', 'std_kwd_count', 'ref_count',
+					 'title_len', 'abstract_len', 'date', 'year']]
+
 
 
