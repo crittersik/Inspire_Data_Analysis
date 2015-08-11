@@ -34,13 +34,13 @@ def load_inspire(path):
     df['abstract_len'] = map(len, df['abstract'])
 
     df['date'] = map(try_parsing_date, df['creation_date'])
-    df['year'] = map(lambda x: x.year, df['date'])
-
     df_temp = df[df['date'] != 'NaN']
+    df_temp['year'] = map(lambda x: x.year, df_temp['date'])
+    # For a simpler use of date and time packages we take only papers after 1900.
+    df_temp2 = df_temp[df_temp['year'] >= 1900]
 
-
-# choose to return only relevant features for further analysis
-    return df_temp[['abstract','citations', 'free_keywords', 'recid',
+    # choose to return only relevant features for further analysis
+    return df_temp2[['abstract','citations', 'free_keywords', 'recid',
                      'references', 'standardized_keywords', 'title',
                      'tot_auth_count', 'tot_auth_list', 'cit_count',
                      'free_kwd_count', 'std_kwd_count', 'ref_count',
