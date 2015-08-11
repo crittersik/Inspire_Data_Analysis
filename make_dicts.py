@@ -1,27 +1,11 @@
 import json
 import os.path
-import sys
-
 from datetime import datetime
-from time import time
-
-import pandas as pd
-import numpy as np
-import random
-import math
-import types
-import csv
-#import time
-
 import sexmachine.detector as gender
 
-
 import read_Inspire_data
-from data_path import DATA_PATH, DATA_FILE_NAME
+from data_path import DATA_PATH, DATA_FILE_NAME, FILE_NAMES, FILE_AUTH, FILE_DICT_recid
 
-FILE_NAMES = "name_memo.json"
-FILE_AUTH = "authors.json"
-FILE_DICT_recid = "recid_dict.json"
 
 ##############################
 #### Check if there is anything
@@ -35,7 +19,6 @@ if os.path.isfile(DATA_PATH+FILE_NAMES) and os.path.isfile(DATA_PATH+FILE_AUTH) 
 #### Load data
 df_clean = read_Inspire_data.load_inspire(DATA_PATH+DATA_FILE_NAME)
 
-
 ##############################
 #### Create gender dictionary
 def get_gender(name):
@@ -46,7 +29,7 @@ def get_gender(name):
         name_memo[name] = gender
         return gender
 
-#create the name-gender dictionary and save to .json or load
+#create the {name:gender} dictionary and save to .json or load
 if os.path.isfile(DATA_PATH+FILE_NAMES):
     name_memo = {}
     with open(DATA_PATH+FILE_NAMES) as infile:
@@ -73,9 +56,47 @@ else:
 
 
 ##############################
+#### Create recid dictionary
+
+# add 5 year citation count
+Nmonths = 60
+
+if not os.path.isfile(DATA_PATH+FILE_DICT_recid):
+    #create a dict with dates per recid
+    recid_dict = {}
+    for row in  df_clean.iterrows():
+        row_num, actual_row = row
+        recid_dict[actual_row['recid']] = {}
+        recid_dict[actual_row['recid']]['date'] = actual_row['date'].strftime('%Y-%m-%d')
+
+    #add total citation and 5-year citation count to the dictionary
+    for row in  df_clean.iterrows():
+        row_num, actual_row = row
+        paper_date = actual_row['date']
+        recid_dict[actual_row['recid']]['cit_5'] = 0
+        recid_dict[actual_row['recid']]['cit_tot'] = actual_row['cit_count']
+        recid_dict[actual_row['recid']]['cit_list'] = actual_row['citations']
+        for cpaper in actual_row['citations']:
+            if cpaper in recid_dict:
+                citation_date = datetime.strptime(recid_dict[cpaper]['date'], '%Y-%m-%d')
+                if 0 < (citation_date - paper_date).days/30 < Nmonths:
+                    recid_dict[actual_row['recid']]['cit_5'] += 1
+
+    with open(DATA_PATH + FILE_DICT_recid, "wb") as outfile:
+        for key, value in recid_dict.items():
+            outfile.write(json.dumps([key, value]) + "\n",)
+
+
+##############################
 #### Create authors dictionary
 def get_name(author):
     name = author.split(", ")[-1].split(" ")[0]
+
+def average_cit_count(recid_list):
+    citations = [recid_dict[elem]['cit_tot'] for elem in recid_list if elem in recid_dict]
+    if len(citations)==0:
+        return 0
+    return float(sum(citations))/len(citations)
 
 authors = {}
 if not os.path.isfile(DATA_PATH+FILE_AUTH):
@@ -100,37 +121,11 @@ if not os.path.isfile(DATA_PATH+FILE_AUTH):
                 authors[author]['papers'] = authors[author]['papers'] + [int(paper)]
                 #authors[author]['collaborators'] = authors[author]['collaborators'] + auth_list
 
+    for auth in authors.keys():
+        authors[auth]['av_cit'] = average_cit_count(authors[auth]['papers'])
+
     with open(DATA_PATH + FILE_AUTH, "wb") as outfile:
         for key, value in authors.items():
             outfile.write(json.dumps([key, value]) + "\n",)
 
 
-##############################
-#### Create recid dictionary
-
-# add 5 year citation count
-Nmonths = 60
-
-if not os.path.isfile(DATA_PATH+FILE_DICT_recid):
-    #create a dict with dates per recid
-    recid_dict = {}
-    for row in  df_clean.iterrows():
-        row_num, actual_row = row
-        recid_dict[actual_row['recid']] = {}
-        recid_dict[actual_row['recid']]['date'] = actual_row['date'].strftime('%Y-%m-%d')
-
-    #add total citation and 5-year citation count to the dictionary
-    for row in  df_clean.iterrows():
-        row_num, actual_row = row
-        paper_date = actual_row['date']
-        recid_dict[actual_row['recid']]['cit_5'] = 0
-        recid_dict[actual_row['recid']]['cit_tot'] = actual_row['cit_count']
-        for cpaper in actual_row['citations']:
-            if cpaper in recid_dict:
-                citation_date = datetime.strptime(recid_dict[cpaper]['date'], '%Y-%m-%d')
-                if 0 < (citation_date - paper_date).days/30 < Nmonths:
-                    recid_dict[actual_row['recid']]['cit_5'] += 1
-
-    with open(DATA_PATH + FILE_DICT_recid, "wb") as outfile:
-        for key, value in recid_dict.items():
-            outfile.write(json.dumps([key, value]) + "\n",)
