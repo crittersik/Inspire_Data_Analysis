@@ -1,23 +1,36 @@
 import json
 import os.path
 from datetime import datetime
+from time import time
+import random
 import sexmachine.detector as gender
 
 import read_Inspire_data
-from data_path import DATA_PATH, DATA_FILE_NAME, FILE_NAMES, FILE_AUTH, FILE_DICT_recid
+from data_path import DATA_PATH, DATA_FILE_NAME, FILE_NAMES, FILE_AUTH, \
+    FILE_DICT_recid, PATH_recid_bib
 
 
 ##############################
 #### Check if there is anything
 #### to do at all
 if os.path.isfile(DATA_PATH+FILE_NAMES) and os.path.isfile(DATA_PATH+FILE_AUTH) \
-        and os.path.isfile(DATA_PATH+FILE_DICT_recid):
+        and os.path.isfile(DATA_PATH+FILE_DICT_recid) and os.path.isfile(
+                        DATA_PATH+PATH_recid_bib) :
+    print 'All files are prepared, nothing more to be done.'
     raise SystemExit
 
 
 ##############################
 #### Load data
+print 'Ready to load data.'
+start = time()
 df_clean = read_Inspire_data.load_inspire(DATA_PATH+DATA_FILE_NAME)
+# take only sample of rows
+#NO_sample = 10000 #1080316 #numer of sample rows taken for analysis
+#rows = random.sample(df_clean_aux.index, NO_sample)
+#df_clean = df_clean_aux.ix[rows]
+end = time()
+print 'Data loaded. Time: ', end - start, 's'
 
 ##############################
 #### Create gender dictionary
@@ -30,7 +43,9 @@ def get_gender(name):
         return gender
 
 #create the {name:gender} dictionary and save to .json or load
-if os.path.isfile(DATA_PATH+FILE_NAMES):
+print 'Ready to prepare name_memo.'
+start = time()
+if os.path.isfile(DATA_PATH+FILE_NAMES) and not os.path.isfile(DATA_PATH+FILE_AUTH):
     name_memo = {}
     with open(DATA_PATH+FILE_NAMES) as infile:
         for line in infile:
@@ -53,23 +68,28 @@ else:
     with open(DATA_PATH + FILE_NAMES, "wb") as outfile:
         for key, value in name_memo.items():
             outfile.write(json.dumps([key, value]) + "\n",)
-
+end = time()
+print 'name_memo done. Time: ', end - start, 's'
 
 ##############################
 #### Create recid dictionary
+#### with citations
+print 'Ready to prepare recid dictionary with citations.'
+start = time()
 
-# add 5 year citation count
+# add 5 year citation count, define # of months
 Nmonths = 60
 
+
 if not os.path.isfile(DATA_PATH+FILE_DICT_recid):
-    #create a dict with dates per recid
+    # create a dict with dates per recid
     recid_dict = {}
     for row in  df_clean.iterrows():
         row_num, actual_row = row
         recid_dict[actual_row['recid']] = {}
         recid_dict[actual_row['recid']]['date'] = actual_row['date'].strftime('%Y-%m-%d')
 
-    #add total citation and 5-year citation count to the dictionary
+    # add total citation and 5-year citation count to the dictionary
     for row in  df_clean.iterrows():
         row_num, actual_row = row
         paper_date = actual_row['date']
@@ -85,10 +105,72 @@ if not os.path.isfile(DATA_PATH+FILE_DICT_recid):
     with open(DATA_PATH + FILE_DICT_recid, "wb") as outfile:
         for key, value in recid_dict.items():
             outfile.write(json.dumps([key, value]) + "\n",)
+else:
+    recid_dict = {}
+    with open(DATA_PATH+FILE_DICT_recid) as infile:
+        for line in infile:
+            key, value = json.loads(line)
+            recid_dict[key] = value
+
+end = time()
+print 'Recid dictionary done. Time: ', end - start, 's'
+
+
+##############################
+#### Create recid dictionary
+#### with  bibliography
+print 'Ready to prepare recid dictionary with bibliography.'
+start = time()
+
+# add function that takes a recid to citation list dictionary, list of
+# recid's and a date, and filters the list of papers taking only papers
+# published earlier that the origin date
+def date_filter_citations(recid_citation, cit_list, date_origin):
+    earlier_recids_aux = [elem for elem in cit_list
+                 if elem in recid_citation]
+    earlier_recids = [elem for elem in earlier_recids_aux
+                 if datetime.strptime(recid_citation[elem]['date'], "%Y-%m-%d") < date_origin]
+    return len(earlier_recids)
+
+# Now we prepare the function that will take average citation count of a
+# given list of papers by recid
+# only inlcude citations before a given year
+
+def average_cit_count_date(recid_citation, recid_list, date_origin):
+    citations = [ date_filter_citations(recid_citation, recid_citation[elem][
+        'cit_list'], date_origin) for elem in recid_list
+                 if elem in recid_citation ]
+    if len(citations)==0:
+        return 0
+    return float(sum(citations))/len(citations)
+
+    # add bibliography and average citation of referenced papers, at the date
+    #  of publication
+if not os.path.isfile(DATA_PATH+PATH_recid_bib):
+    recid_bib = {}
+    for row in  df_clean.iterrows():
+        row_num, actual_row = row
+        paper_date = actual_row['date']
+        recid_bib[actual_row['recid']] = {}
+
+        recid_bib[actual_row['recid']]['bib'] = actual_row['references']
+        recid_bib[actual_row['recid']]['bib_av_cit'] = \
+            average_cit_count_date(recid_dict, actual_row['references'],
+                                   actual_row['date'])
+
+    with open(DATA_PATH + PATH_recid_bib, "wb") as outfile:
+        for key, value in recid_bib.items():
+            outfile.write(json.dumps([key, value]) + "\n",)
+
+end = time()
+print 'Recid to bib dictionary done. Time: ', end - start, 's'
 
 
 ##############################
 #### Create authors dictionary
+print 'Ready to prepare authors dictionary.'
+start = time()
+
 def get_name(author):
     name = author.split(", ")[-1].split(" ")[0]
 
@@ -128,4 +210,5 @@ if not os.path.isfile(DATA_PATH+FILE_AUTH):
         for key, value in authors.items():
             outfile.write(json.dumps([key, value]) + "\n",)
 
-
+end = time()
+print 'Authors dictionary done. Time: ', end - start, 's'
