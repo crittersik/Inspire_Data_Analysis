@@ -6,7 +6,7 @@ InspireHEP is a High-Energy Physics Literature Database. The data are available 
 http://inspirehep.net/info/hep/api
 
 To download and unpack the data file use download_data.py:
-python donwload_data.py 
+python download_data.py 
 
 To set destination path and also some of the filenames, use data_path.py.
 
@@ -16,4 +16,5 @@ You can also view this basic plots notebook with ipython notebook viewer:
 http://nbviewer.ipython.org/github/crittersik/Inspire_Data_Analysis/blob/master/Inspire_basic_plots.ipynb
 
 In Inspire_predict_citations.ipynb I am doing some simple feature engineering and machine learning on the data to predict citations count. 
-I is stil pretty raw, we'll add some more work, better model validation later.
+I is stil pretty raw, we'll add some more work, better model validation later. To run this notebook with all possible features, you should at first compile
+make_dicts.py . Watch out, computing dict_bib.json in the present form takes 20 hours.
